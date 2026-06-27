@@ -92,7 +92,9 @@ function getWs() {
   ws.onmessage = (e) => {
     try {
       const parsed = JSON.parse(e.data);
-      const { event, ...data } = parsed;
+      // The server sends { event: string, data: any }
+      const event = parsed.event;
+      const data = parsed.data !== undefined ? parsed.data : parsed;
       listeners[event]?.forEach((fn) => fn(data));
       listeners['*']?.forEach((fn) => fn(parsed));
     } catch {}

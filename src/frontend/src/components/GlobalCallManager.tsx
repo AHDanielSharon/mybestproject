@@ -231,6 +231,31 @@ export default function GlobalCallManager() {
             callType: parsed.callType || "video",
             sessionId,
           });
+
+          if ("serviceWorker" in navigator && "Notification" in window && Notification.permission === "granted") {
+            navigator.serviceWorker.ready.then((reg) => {
+              reg.showNotification(`Incoming ${parsed.callType === "audio" ? "Voice" : "Video"} Call`, {
+                body: `Someone is calling you... Tap to answer.`,
+                icon: '/assets/generated/socionet-pwa-icon-192.dim_192x192.png',
+                tag: `incoming-call-${sessionId}`,
+                requireInteraction: true,
+                vibrate: [
+                  500, 200, 500, 200, 500, 200,
+                  500, 200, 500, 200, 500, 200
+                ],
+                data: {
+                  type: 'incoming-call',
+                  callerPrincipal: parsed.callerPrincipal,
+                  callSessionId: sessionId,
+                  url: `/`
+                },
+                actions: [
+                  { action: 'accept', title: '✅ Accept' },
+                  { action: 'decline', title: '❌ Decline' }
+                ]
+              });
+            });
+          }
         }
       } catch { /* ignore parse errors */ }
     }, 1500);
@@ -248,6 +273,32 @@ export default function GlobalCallManager() {
           callType: data.callType || "video",
           sessionId: data.sessionId,
         });
+
+        // Trigger native mobile notification
+        if ("serviceWorker" in navigator && "Notification" in window && Notification.permission === "granted") {
+          navigator.serviceWorker.ready.then((reg) => {
+            reg.showNotification(`Incoming ${data.callType === "audio" ? "Voice" : "Video"} Call`, {
+              body: `Someone is calling you... Tap to answer.`,
+              icon: '/assets/generated/socionet-pwa-icon-192.dim_192x192.png',
+              tag: `incoming-call-${data.sessionId}`,
+              requireInteraction: true,
+              vibrate: [
+                500, 200, 500, 200, 500, 200,
+                500, 200, 500, 200, 500, 200
+              ],
+              data: {
+                type: 'incoming-call',
+                callerPrincipal: data.callerPrincipal,
+                callSessionId: data.sessionId,
+                url: `/`
+              },
+              actions: [
+                { action: 'accept', title: '✅ Accept' },
+                { action: 'decline', title: '❌ Decline' }
+              ]
+            });
+          });
+        }
       }
     });
 
