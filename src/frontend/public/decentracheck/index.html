@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>DECENTRA-CHECK AI · Decentralization Auditor</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://unpkg.com/vis-network@9.1.9/standalone/umd/vis-network.min.js"></script>
+<style>
+:root{
+  --bg:#05070f; --bg2:#0a0f1f; --panel:rgba(16,22,40,0.55);
+  --panel-solid:#0c1224; --border:rgba(90,130,220,0.22);
+  --cyan:#19e3ff; --cyan-dim:#0fb6cf; --mag:#ff2bd6; --vio:#8a5cff;
+  --green:#22f5a8; --amber:#ffc24b; --red:#ff4d6d; --txt:#e8f0ff;
+  --muted:#8aa0c8; --glow:0 0 22px rgba(25,227,255,.35);
+  font-synthesis:none;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:
+    radial-gradient(1200px 700px at 85% -10%, rgba(138,92,255,.18), transparent 60%),
+    radial-gradient(1000px 600px at 5% 110%, rgba(255,43,214,.12), transparent 55%),
+    linear-gradient(180deg,#05070f,#070b18 55%,#05070f);
+  color:var(--txt);
+  font-family:'Segoe UI',Inter,system-ui,-apple-system,sans-serif;
+  overflow-x:hidden; min-height:100vh;
+}
+#particles{position:fixed;inset:0;z-index:0;pointer-events:none;opacity:.55}
+.wrap{position:relative;z-index:2;max-width:1320px;margin:0 auto;padding:0 22px 80px}
+header.topbar{position:sticky;top:0;z-index:50;backdrop-filter:blur(14px);background:linear-gradient(180deg,rgba(5,7,15,.92),rgba(5,7,15,.55));border-bottom:1px solid var(--border);}
+.topbar-inner{max-width:1320px;margin:0 auto;padding:14px 22px;display:flex;align-items:center;gap:16px}
+.logo{display:flex;align-items:center;gap:12px}
+.logo .mark{width:42px;height:42px;border-radius:12px;position:relative;flex:none;background:conic-gradient(from 0deg,var(--cyan),var(--vio),var(--mag),var(--cyan));box-shadow:var(--glow);animation:spin 9s linear infinite;}
+.logo .mark::after{content:"";position:absolute;inset:4px;border-radius:9px;background:var(--bg2);display:grid;place-items:center}
+.logo .mark span{position:absolute;inset:0;display:grid;place-items:center;font-weight:800;color:var(--cyan);font-size:20px}
+@keyframes spin{to{transform:rotate(360deg)}}
+.logo h1{font-size:19px;letter-spacing:2px;font-weight:800}
+.logo h1 b{color:var(--cyan)}
+.logo .sub{font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase}
+.topbar .spacer{flex:1}
+.pill{font-size:11px;color:var(--muted);border:1px solid var(--border);padding:6px 12px;border-radius:30px;letter-spacing:1px}
+.btn{border:1px solid var(--border);background:var(--panel);color:var(--txt);padding:9px 16px;border-radius:10px;cursor:pointer;font-weight:600;font-size:13px;transition:.18s;letter-spacing:.5px;}
+.btn:hover{border-color:var(--cyan);box-shadow:var(--glow);transform:translateY(-1px)}
+.btn.primary{background:linear-gradient(135deg,var(--cyan-dim),var(--vio));border:none;color:#04111a}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;box-shadow:none}
+.hero{text-align:center;padding:46px 0 24px}
+.hero h2{font-size:34px;font-weight:800;letter-spacing:1px;line-height:1.15}
+.hero h2 .grad{background:linear-gradient(90deg,var(--cyan),var(--mag),var(--vio));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--muted);margin-top:12px;max-width:680px;margin-inline:auto;font-size:15px}
+.drop{margin:26px auto 0;max-width:880px;border:2px dashed var(--border);border-radius:20px;background:var(--panel);backdrop-filter:blur(12px);padding:46px 30px;cursor:pointer;transition:.2s;position:relative;overflow:hidden;}
+.drop.drag{border-color:var(--cyan);box-shadow:0 0 40px rgba(25,227,255,.25);transform:scale(1.01)}
+.drop .ico{font-size:48px;filter:drop-shadow(var(--glow))}
+.drop h3{margin:14px 0 6px;font-size:20px}
+.drop p{color:var(--muted);font-size:13px}
+.drop .or{display:flex;gap:14px;justify-content:center;margin-top:20px;flex-wrap:wrap}
+.langbar{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;margin-top:22px;max-width:760px;margin-inline:auto}
+.langbar span{font-size:10.5px;color:var(--muted);border:1px solid var(--border);border-radius:20px;padding:4px 10px;letter-spacing:.5px}
+.progress-card{max-width:880px;margin:24px auto;display:none}
+.progress-card.on{display:block}
+.bar{height:10px;border-radius:8px;background:rgba(255,255,255,.06);overflow:hidden;border:1px solid var(--border)}
+.bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--cyan),var(--vio),var(--mag));transition:width .25s;box-shadow:var(--glow)}
+.prog-meta{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px}
+.log{margin-top:12px;max-height:140px;overflow:auto;font-family:ui-monospace,Menlo,monospace;font-size:11.5px;color:#9fd9ff;background:rgba(0,0,0,.35);border:1px solid var(--border);border-radius:10px;padding:10px}
+.log div{opacity:.85;white-space:pre-wrap}
+.card{background:var(--panel);backdrop-filter:blur(12px);border:1px solid var(--border);border-radius:18px;padding:22px;position:relative;overflow:hidden}
+.card::before{content:"";position:absolute;top:0;left:0;right:0;height:1px;background:linear-gradient(90deg,transparent,var(--cyan),transparent);opacity:.5}
+.section-title{display:flex;align-items:center;gap:10px;font-size:15px;letter-spacing:2px;text-transform:uppercase;color:var(--cyan);font-weight:700;margin-bottom:16px}
+.section-title .dot{width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:var(--glow)}
+#results{display:none}
+#results.on{display:block}
+.grid{display:grid;gap:18px}
+.g-2{grid-template-columns:1fr 1fr}
+.g-3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:900px){.g-2,.g-3{grid-template-columns:1fr}}
+.score-wrap{display:flex;align-items:center;gap:28px;flex-wrap:wrap}
+.gauge{position:relative;width:240px;height:240px;flex:none}
+.gauge svg{transform:rotate(-90deg)}
+.gauge .num{position:absolute;inset:0;display:grid;place-items:center;flex-direction:column}
+.gauge .num b{font-size:58px;font-weight:800;background:linear-gradient(90deg,var(--cyan),var(--mag));-webkit-background-clip:text;background-clip:text;color:transparent;line-height:1}
+.gauge .num small{display:block;text-align:center;color:var(--muted);font-size:12px;letter-spacing:2px;margin-top:6px}
+.classify{font-size:24px;font-weight:800;letter-spacing:1px}
+.tagline{color:var(--muted);font-size:13px;margin-top:6px;max-width:360px}
+.factor{margin-top:12px}
+.factor .row{display:flex;justify-content:space-between;font-size:12px;margin-bottom:5px;color:var(--muted)}
+.factor .b{height:7px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden}
+.factor .b > i{display:block;height:100%;border-radius:6px;background:linear-gradient(90deg,var(--cyan),var(--vio))}
+.stat{text-align:center;padding:18px 10px}
+.stat b{display:block;font-size:30px;font-weight:800;color:var(--cyan)}
+.stat span{font-size:11px;color:var(--muted);letter-spacing:1px;text-transform:uppercase}
+.evi{border:1px solid var(--border);border-radius:12px;padding:14px;margin-bottom:12px;background:rgba(0,0,0,.22);transition:.15s}
+.evi:hover{border-color:var(--cyan)}
+.evi .top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.evi .file{font-family:ui-monospace,monospace;color:var(--cyan);font-size:13px;font-weight:600}
+.evi .tag{font-size:10px;padding:3px 9px;border-radius:20px;letter-spacing:1px;font-weight:700}
+.tag.dec{background:rgba(34,245,168,.15);color:var(--green);border:1px solid rgba(34,245,168,.4)}
+.tag.cen{background:rgba(255,77,109,.15);color:var(--red);border:1px solid rgba(255,77,109,.4)}
+.tag.hyb{background:rgba(255,194,75,.15);color:var(--amber);border:1px solid rgba(255,194,75,.4)}
+.evi .reason{color:var(--txt);font-size:13px;margin-top:8px}
+.evi .snippet{font-family:ui-monospace,monospace;font-size:11px;background:#05080f;border:1px solid var(--border);border-radius:8px;padding:8px 10px;margin-top:8px;color:#7fd6ff;overflow:auto;white-space:pre}
+.conf{display:flex;align-items:center;gap:8px;margin-top:8px}
+.conf .b{flex:1;height:6px;border-radius:6px;background:rgba(255,255,255,.06);overflow:hidden}
+.conf .b > i{display:block;height:100%;background:linear-gradient(90deg,var(--cyan),var(--mag))}
+.conf small{color:var(--muted);font-size:11px;width:42px;text-align:right}
+#netgraph{height:460px;border-radius:14px;border:1px solid var(--border);background:radial-gradient(circle at 50% 50%,rgba(20,30,60,.4),rgba(5,7,15,.6))}
+.sim-controls{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.sim-status{margin-top:14px;padding:14px;border-radius:12px;text-align:center;font-weight:800;letter-spacing:1px;font-size:18px;border:1px solid var(--border)}
+.sim-status.ok{color:var(--green);background:rgba(34,245,168,.08);border-color:rgba(34,245,168,.4);text-shadow:0 0 14px rgba(34,245,168,.4)}
+.sim-status.fail{color:var(--red);background:rgba(255,77,109,.08);border-color:rgba(255,77,109,.4);text-shadow:0 0 14px rgba(255,77,109,.4)}
+.sim-detail{font-size:12px;color:var(--muted);margin-top:8px;font-weight:400;letter-spacing:0}
+.arch{display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 0}
+.arch .layer{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.arch .node{min-width:120px;text-align:center;padding:12px 16px;border-radius:12px;border:1px solid var(--border);background:rgba(20,30,60,.5);font-size:13px;font-weight:600;position:relative;animation:float 4s ease-in-out infinite;}
+.arch .node.srv{border-color:var(--amber);color:var(--amber)}
+.arch .node.db{border-color:var(--mag);color:var(--mag)}
+.arch .node.peer{border-color:var(--green);color:var(--green)}
+.arch .node.chain{border-color:var(--vio);color:var(--vio)}
+.arch .node small{display:block;font-size:10px;color:var(--muted);font-weight:400;margin-top:2px}
+.arch .conn{width:2px;height:24px;background:linear-gradient(var(--cyan),transparent);position:relative}
+.arch .conn::after{content:"";position:absolute;left:-2px;top:0;width:6px;height:6px;border-radius:50%;background:var(--cyan);box-shadow:var(--glow);animation:drop 1.6s linear infinite}
+@keyframes drop{0%{top:0;opacity:1}100%{top:24px;opacity:0}}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.sum h4{font-size:13px;letter-spacing:1px;text-transform:uppercase;margin:16px 0 8px}
+.sum ul{list-style:none}
+.sum li{font-size:13px;color:var(--txt);padding:7px 0 7px 22px;position:relative;border-bottom:1px solid rgba(255,255,255,.04)}
+.sum li::before{content:"▸";position:absolute;left:4px;color:var(--cyan)}
+.sum li.good::before{content:"✔";color:var(--green)}
+.sum li.bad::before{content:"⚠";color:var(--red)}
+.sum li.imp::before{content:"➜";color:var(--amber)}
+.exec{font-size:14px;line-height:1.7;color:#cfe0ff}
+.muted{color:var(--muted)}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end;margin-bottom:18px}
+.hidden{display:none!important}
+.empty-note{color:var(--muted);font-size:13px;font-style:italic;padding:8px 0}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-thumb{background:rgba(90,130,220,.35);border-radius:8px}
+::-webkit-scrollbar-track{background:transparent}
+.api-row{display:flex;gap:8px;align-items:center;margin-top:10px;flex-wrap:wrap}
+.api-row input{flex:1;min-width:220px;background:rgba(0,0,0,.35);border:1px solid var(--border);color:var(--txt);padding:9px 12px;border-radius:8px;font-size:12px}
+</style>
+</head>
+<body>
+<canvas id="particles"></canvas>
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="logo">
+      <div class="mark"><span>D</span></div>
+      <div>
+        <h1>DECENTRA<b>·</b>CHECK <b>AI</b></h1>
+        <div class="sub">Source-Code Decentralization Auditor</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <span class="pill" id="modePill">● OFFLINE ENGINE</span>
+    <button class="btn ghost" id="resetBtn">↺ New Audit</button>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="hero" id="hero">
+    <h2>Verify decentralization claims <span class="grad">from source code alone</span></h2>
+    <p>Upload your project ZIP or files. Everything runs locally in your browser — no servers, no internet required.</p>
+    <div class="drop" id="drop">
+      <div class="ico">🛰️</div>
+      <h3>Drop your project here</h3>
+      <p>ZIP archive · multiple source files · or a whole folder</p>
+      <div class="or">
+        <button class="btn primary" id="pickZip">📦 Upload ZIP</button>
+        <button class="btn" id="pickFiles">📄 Select Files</button>
+        <button class="btn" id="pickFolder">📁 Select Folder</button>
+      </div>
+      <input type="file" id="inpZip" class="hidden" accept=".zip" />
+      <input type="file" id="inpFiles" class="hidden" multiple />
+      <input type="file" id="inpFolder" class="hidden" webkitdirectory directory multiple />
+    </div>
+    <div class="langbar">
+      <span>Java</span><span>C</span><span>C++</span><span>Python</span><span>JavaScript</span><span>TypeScript</span>
+      <span>React</span><span>Next.js</span><span>Node.js</span><span>Go</span><span>Rust</span><span>Solidity</span>
+      <span>PHP</span><span>Kotlin</span><span>Swift</span><span>HTML</span><span>CSS</span>
+    </div>
+  </section>
+
+  <div class="card progress-card" id="progress">
+    <div class="section-title"><span class="dot"></span> Analyzing project</div>
+    <div class="bar"><i id="barFill"></i></div>
+    <div class="prog-meta"><span id="progPhase">Initializing…</span><span id="progPct">0%</span></div>
+    <div class="log" id="log"></div>
+  </div>
+
+  <div id="results">
+    <div class="toolbar">
+      <button class="btn" id="exportJson">⬇ Export JSON</button>
+    </div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="section-title"><span class="dot"></span> Decentralization Score</div>
+      <div class="score-wrap">
+        <div class="gauge">
+          <svg width="240" height="240" viewBox="0 0 240 240">
+            <circle cx="120" cy="120" r="100" stroke="rgba(255,255,255,.07)" stroke-width="18" fill="none"/>
+            <defs><linearGradient id="gg" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#19e3ff"/><stop offset="100%" stop-color="#ff2bd6"/>
+            </linearGradient></defs>
+            <circle id="gaugeArc" cx="120" cy="120" r="100" stroke="url(#gg)" stroke-width="18" fill="none"
+              stroke-linecap="round" stroke-dasharray="628" stroke-dashoffset="628"
+              style="transition:stroke-dashoffset 1.4s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 0 10px rgba(25,227,255,.5))"/>
+          </svg>
+          <div class="num"><div><b id="scoreNum">0</b><small>/ 100</small></div></div>
+        </div>
+        <div style="flex:1;min-width:280px">
+          <div class="classify" id="classify">—</div>
+          <div class="tagline" id="tagline"></div>
+          <div id="factors" style="margin-top:16px"></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card grid g-3" id="statBlock" style="margin-bottom:18px"></div>
+
+    <div class="card" style="margin-bottom:18px">
+      <div class="section-title"><span class="dot"></span> Detected Architecture</div>
+      <div class="arch" id="archDiagram"></div>
+    </div>
+
+    <div class="grid g-2" style="margin-bottom:18px">
+      <div class="card">
+        <div class="section-title"><span class="dot" style="background:var(--green)"></span> Decentralization Evidence</div>
+        <div id="decEvidence"></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><span class="dot" style="background:var(--red)"></span> Centralization Evidence</div>
+        <div id="cenEvidence"></div>
+      </div>
+    </div>
+
+    <div class="grid g-2" style="margin-bottom:18px">
+      <div class="card">
+        <div class="section-title"><span class="dot"></span> Network Topology</div>
+        <div id="netgraph"></div>
+      </div>
+      <div class="card">
+        <div class="section-title"><span class="dot"></span> Failure Simulation</div>
+        <p class="muted" style="font-size:13px">Knock out infrastructure and predict whether the system survives.</p>
+        <div class="sim-controls" id="simControls"></div>
+        <div class="sim-status ok" id="simStatus">NETWORK OPERATIONAL</div>
+        <div class="sim-detail" id="simDetail">All systems nominal. Run a strike to test resilience.</div>
+        <button class="btn ghost" id="simReset" style="margin-top:12px">↺ Restore Network</button>
+      </div>
+    </div>
+
+    <div class="card sum" style="margin-bottom:18px">
+      <div class="section-title"><span class="dot"></span> Project Report</div>
+      <h4>Executive Summary</h4>
+      <p class="exec" id="execSummary"></p>
+      <div class="grid g-2" style="margin-top:8px">
+        <div><h4>✔ Decentralization Features</h4><ul id="strengths"></ul></div>
+        <div><h4>⚠ Centralization Risks</h4><ul id="weaknesses"></ul></div>
+      </div>
+      <h4>➜ Suggested Improvements</h4>
+      <ul id="improvements"></ul>
+    </div>
+  </div>
+</div>
+
+<script src="engine.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160">
+  <!-- Body -->
+  <rect x="38" y="80" width="44" height="50" rx="14" fill="#EC407A"/>
+  <!-- Collar -->
+  <rect x="38" y="78" width="44" height="6" rx="3" fill="white"/>
+  <!-- Skirt -->
+  <path d="M38 118 L36 130 Q60 135 84 130 L82 118Z" fill="#EC407A"/>
+  <!-- Head -->
+  <ellipse cx="60" cy="48" rx="27" ry="29" fill="#FFCCBC"/>
+  <!-- Hair back -->
+  <path d="M33 45 Q33 20 45 15 Q60 12 75 15 Q87 20 87 45 Q85 25 60 22 Q35 25 33 45Z" fill="#1A1A2E"/>
+  <!-- Hair sides -->
+  <path d="M33 45 Q30 60 33 75" fill="none" stroke="#1A1A2E" stroke-width="10" stroke-linecap="round"/>
+  <path d="M87 45 Q90 60 87 75" fill="none" stroke="#1A1A2E" stroke-width="10" stroke-linecap="round"/>
+  <!-- Hair bun -->
+  <circle cx="42" cy="22" r="8" fill="#1A1A2E"/>
+  <circle cx="78" cy="22" r="8" fill="#1A1A2E"/>
+  <!-- Bow left -->
+  <path d="M34 22 L28 18 L28 26Z" fill="#EC407A"/>
+  <path d="M34 22 L28 18 L28 26Z" fill="#EC407A" transform="translate(44,0)"/>
+  <!-- Eyes -->
+  <ellipse cx="46" cy="48" rx="4" ry="5" fill="#222"/>
+  <ellipse cx="74" cy="48" rx="4" ry="5" fill="#222"/>
+  <circle cx="48" cy="46" r="1.5" fill="white"/>
+  <circle cx="76" cy="46" r="1.5" fill="white"/>
+  <!-- Eyelashes -->
+  <path d="M41 43 L39 41" stroke="#1A1A2E" stroke-width="1" fill="none"/>
+  <path d="M49 43 L51 41" stroke="#1A1A2E" stroke-width="1" fill="none"/>
+  <path d="M71 43 L69 41" stroke="#1A1A2E" stroke-width="1" fill="none"/>
+  <path d="M79 43 L81 41" stroke="#1A1A2E" stroke-width="1" fill="none"/>
+  <!-- Eyebrows -->
+  <path d="M40 40 Q46 37 52 40" stroke="#1A1A2E" stroke-width="1.2" fill="none"/>
+  <path d="M68 40 Q74 37 80 40" stroke="#1A1A2E" stroke-width="1.2" fill="none"/>
+  <!-- Nose -->
+  <ellipse cx="60" cy="56" rx="2" ry="1.5" fill="#E0A08C"/>
+  <!-- Mouth -->
+  <path d="M54 63 Q60 67 66 63" stroke="#E91E63" stroke-width="1.2" fill="none"/>
+  <!-- Arms -->
+  <rect x="22" y="85" width="16" height="8" rx="4" fill="#FFCCBC"/>
+  <rect x="82" y="85" width="16" height="8" rx="4" fill="#FFCCBC"/>
+  <!-- Legs -->
+  <rect x="44" y="128" width="12" height="20" rx="5" fill="#FFCCBC"/>
+  <rect x="64" y="128" width="12" height="20" rx="5" fill="#FFCCBC"/>
+  <!-- Shoes -->
+  <ellipse cx="50" cy="150" rx="9" ry="5" fill="#E91E63"/>
+  <ellipse cx="70" cy="150" rx="9" ry="5" fill="#E91E63"/>
+</svg>

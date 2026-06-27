@@ -1,0 +1,24 @@
+{
+  "name": "@caffeine/socionet-app",
+  "type": "module",
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "postinstall": "npm install --legacy-peer-deps --prefix src/frontend",
+    "dev": "node dev.js",
+    "start": "node dev.js"
+  },
+  "devDependencies": {
+    "sharp": "^0.34.4"
+  },
+  "dependencies": {
+    "@caffeineai/core-infrastructure": "^0.3.0",
+    "@google-cloud/firestore": "^7.11.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "http-proxy": "^1.18.1",
+    "pg": "^8.11.3",
+    "ws": "^8.21.0"
+  }
+}

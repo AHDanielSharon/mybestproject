@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160">
+  <!-- Body (slim) -->
+  <rect x="42" y="80" width="36" height="50" rx="10" fill="#7E57C2"/>
+  <!-- Collar -->
+  <rect x="42" y="78" width="36" height="6" rx="3" fill="white"/>
+  <!-- Head (pointy chin) -->
+  <ellipse cx="60" cy="48" rx="26" ry="28" fill="#FFCCBC"/>
+  <!-- Slicked back hair -->
+  <path d="M34 42 Q35 20 60 18 Q85 20 86 42 Q84 28 60 26 Q36 28 34 42Z" fill="#E65100"/>
+  <path d="M34 42 Q30 38 34 34" fill="#E65100"/>
+  <path d="M86 42 Q90 38 86 34" fill="#E65100"/>
+  <!-- Side hair points -->
+  <path d="M34 42 Q32 48 34 55" fill="none" stroke="#E65100" stroke-width="8" stroke-linecap="round"/>
+  <!-- Freckles -->
+  <circle cx="42" cy="56" r="1.2" fill="#A1887F"/>
+  <circle cx="47" cy="58" r="1.2" fill="#A1887F"/>
+  <circle cx="73" cy="56" r="1.2" fill="#A1887F"/>
+  <circle cx="78" cy="58" r="1.2" fill="#A1887F"/>
+  <circle cx="52" cy="59" r="1.2" fill="#A1887F"/>
+  <circle cx="68" cy="59" r="1.2" fill="#A1887F"/>
+  <!-- Eyes (narrow, smug) -->
+  <path d="M40 46 Q45 44 50 46" stroke="#222" stroke-width="2" fill="none"/>
+  <path d="M70 46 Q75 44 80 46" stroke="#222" stroke-width="2" fill="none"/>
+  <circle cx="45" cy="46" r="2.5" fill="#222"/>
+  <circle cx="75" cy="46" r="2.5" fill="#222"/>
+  <!-- Eyebrows (thin, high) -->
+  <path d="M40 40 Q45 38 50 40" stroke="#E65100" stroke-width="1.2" fill="none"/>
+  <path d="M70 40 Q75 38 80 40" stroke="#E65100" stroke-width="1.2" fill="none"/>
+  <!-- Nose -->
+  <ellipse cx="60" cy="54" rx="2" ry="1.5" fill="#E0A08C"/>
+  <!-- Smug mouth -->
+  <path d="M54 62 Q60 64 66 62" stroke="#333" stroke-width="1.2" fill="none"/>
+  <!-- Arms -->
+  <rect x="26" y="85" width="16" height="7" rx="3.5" fill="#FFCCBC"/>
+  <rect x="78" y="85" width="16" height="7" rx="3.5" fill="#FFCCBC"/>
+  <!-- Legs -->
+  <rect x="45" y="128" width="12" height="20" rx="5" fill="#7E57C2"/>
+  <rect x="63" y="128" width="12" height="20" rx="5" fill="#7E57C2"/>
+  <!-- Shoes -->
+  <ellipse cx="51" cy="150" rx="9" ry="5" fill="#444"/>
+  <ellipse cx="69" cy="150" rx="9" ry="5" fill="#444"/>
+</svg>

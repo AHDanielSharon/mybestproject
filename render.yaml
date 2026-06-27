@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: socionet-backend
+    runtime: node
+    buildCommand: npm install --legacy-peer-deps
+    startCommand: node server.cjs
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000

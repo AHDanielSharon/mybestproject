@@ -1,0 +1,14 @@
+node_modules
+.git
+.next
+dist
+build
+.icp
+.old
+.npm
+*.log
+.DS_Store
+.env.local
+.env.*.local
+pnpm-store
+.cache

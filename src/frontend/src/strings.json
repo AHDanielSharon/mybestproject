@@ -1,0 +1,12 @@
+{
+  "welcome": {
+    "tapToStart": "Tap anywhere to start with sound",
+    "loading": "Loading...",
+    "voiceError": "Voice audio play failed:",
+    "bgmError": "BGM play failed:",
+    "logoAlt": "SOCIONET"
+  },
+  "auth": {
+    "loginSuccess": "Login successful, principal:"
+  }
+}

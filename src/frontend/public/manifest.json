@@ -1,0 +1,88 @@
+{
+  "name": "SOCIONET - The Ultimate Global Social Media Experience",
+  "short_name": "SOCIONET",
+  "description": "A social media application with video playback, stories, messaging, and real-time interactions with neon UI theme",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#00BFFF",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/assets/generated/socionet-pwa-icon-192.dim_192x192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/socionet-pwa-icon-512.dim_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/generated/socionet-pwa-icon-512.dim_512x512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Feed",
+      "short_name": "Feed",
+      "description": "View your feed",
+      "url": "/",
+      "icons": [
+        {
+          "src": "/assets/generated/socionet-pwa-icon-192.dim_192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Messages",
+      "short_name": "Messages",
+      "description": "Check your messages",
+      "url": "/messages",
+      "icons": [
+        {
+          "src": "/assets/generated/socionet-pwa-icon-192.dim_192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Profile",
+      "short_name": "Profile",
+      "description": "View your profile",
+      "url": "/profile",
+      "icons": [
+        {
+          "src": "/assets/generated/socionet-pwa-icon-192.dim_192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    },
+    {
+      "name": "Reels",
+      "short_name": "Reels",
+      "description": "Watch reels",
+      "url": "/reels",
+      "icons": [
+        {
+          "src": "/assets/generated/socionet-pwa-icon-192.dim_192x192.png",
+          "sizes": "192x192"
+        }
+      ]
+    }
+  ],
+  "categories": ["social", "entertainment", "lifestyle"],
+  "screenshots": [
+    {
+      "src": "/assets/generated/pwa-splash-screen.dim_800x600.png",
+      "sizes": "800x600",
+      "type": "image/png"
+    }
+  ]
+}

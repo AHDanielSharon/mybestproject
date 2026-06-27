@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 160">
+  <!-- Body (big) -->
+  <ellipse cx="60" cy="105" rx="42" ry="40" fill="#EF6C00"/>
+  <!-- Head -->
+  <ellipse cx="60" cy="50" rx="32" ry="32" fill="#FFCCBC"/>
+  <!-- Spiky hair -->
+  <path d="M28 40 L25 15 L35 28 L33 5 L42 25 L45 0 L52 22 L60 2 L62 25 L70 5 L68 25 L78 15 L72 35Z" fill="#1A1A2E"/>
+  <!-- Angry eyebrows -->
+  <path d="M34 38 L50 42" stroke="#1A1A2E" stroke-width="3" stroke-linecap="round"/>
+  <path d="M86 38 L70 42" stroke="#1A1A2E" stroke-width="3" stroke-linecap="round"/>
+  <!-- Eyes -->
+  <circle cx="44" cy="48" r="5" fill="#222"/>
+  <circle cx="76" cy="48" r="5" fill="#222"/>
+  <circle cx="45" cy="47" r="1.5" fill="white"/>
+  <circle cx="77" cy="47" r="1.5" fill="white"/>
+  <!-- Nose -->
+  <ellipse cx="60" cy="55" rx="4" ry="3" fill="#E0A08C"/>
+  <!-- Wide mouth -->
+  <path d="M44 64 Q60 74 76 64" stroke="#333" stroke-width="2" fill="none"/>
+  <!-- Arms -->
+  <ellipse cx="18" cy="95" rx="10" ry="18" fill="#EF6C00"/>
+  <ellipse cx="102" cy="95" rx="10" ry="18" fill="#EF6C00"/>
+  <!-- Legs -->
+  <rect x="38" y="135" width="18" height="20" rx="8" fill="#333"/>
+  <rect x="64" y="135" width="18" height="20" rx="8" fill="#333"/>
+  <!-- Shoes -->
+  <ellipse cx="47" cy="156" rx="12" ry="6" fill="#555"/>
+  <ellipse cx="73" cy="156" rx="12" ry="6" fill="#555"/>
+</svg>

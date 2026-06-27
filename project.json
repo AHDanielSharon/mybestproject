@@ -1,0 +1,22 @@
+{
+  "overview": "SOCIONET is a decentralized social media platform on the Internet Computer with an Instagram-style mobile-first UI for sharing reels, stories, and messages.",
+  "features": [
+    "Instagram-style feed with stories and post cards",
+    "Full-screen vertical snap-scroll Reels",
+    "Instagram DM-style messaging with chat bubbles",
+    "Creator-style profile page with media grid",
+    "Full-screen video calling with floating local preview",
+    "Dark mode with neon glassmorphic accents"
+  ],
+  "category": "social-media",
+  "tags": [
+    "social-media",
+    "blockchain",
+    "mobile-first",
+    "instagram-style",
+    "reels",
+    "messaging",
+    "video-call"
+  ],
+  "last_updated": "2026-05-26T06:43:44.891Z"
+}

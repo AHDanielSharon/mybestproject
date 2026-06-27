@@ -1,0 +1,12 @@
+packages:
+  - src/**/*
+allowBuilds:
+  '@biomejs/biome': true
+  '@firebase/util': set this to true or false
+  esbuild: true
+  protobufjs: set this to true or false
+  sharp: true
+onlyBuiltDependencies:
+  - '@biomejs/biome'
+  - esbuild
+  - sharp
