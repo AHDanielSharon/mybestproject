@@ -50,6 +50,22 @@ async function main() {
     console.log();
   }
 
+  // Start the backend API server (port 4000) — required for mock mode
+  console.log(colors.cyan("  🚀 Starting backend API server on port 4000..."));
+  const backend = spawn("node", ["server.cjs"], {
+    stdio: "inherit",
+    cwd: __dirname,
+    shell: true,
+    env: { ...process.env },
+  });
+
+  backend.on("error", (err) => {
+    console.log(colors.red(`  ✗ Backend server failed to start: ${err.message}`));
+  });
+
+  // Give the backend a moment to start before launching Vite
+  await new Promise((r) => setTimeout(r, 1000));
+
   console.log(colors.cyan("  🌐 Starting Vite dev server..."));
   console.log(colors.bold("  ➜  http://localhost:5173"));
   console.log();
@@ -67,17 +83,26 @@ async function main() {
   });
 
   vite.on("close", (code) => {
+    backend.kill();
     if (code !== 0) {
       console.log(colors.red(`\n  ✗ Vite exited with code ${code}`));
     }
     process.exit(code ?? 0);
   });
 
+  backend.on("close", (code) => {
+    if (code !== 0) {
+      console.log(colors.red(`\n  ✗ Backend exited with code ${code}`));
+    }
+  });
+
   process.on("SIGINT", () => {
     vite.kill("SIGINT");
+    backend.kill("SIGINT");
   });
   process.on("SIGTERM", () => {
     vite.kill("SIGTERM");
+    backend.kill("SIGTERM");
   });
 }
 

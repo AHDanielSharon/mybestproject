@@ -26,35 +26,50 @@ const MY_PRINCIPAL = { toText: () => MY_PRINCIPAL_STR, toString: () => MY_PRINCI
 // ── HTTP helpers ───────────────────────────────────────────────────────────
 const api = {
   get: async (path: string) => {
-    const r = await fetch(`${API_BASE}${path}`, {
-      headers: {
-        "Bypass-Tunnel-Reminder": "true",
-        "ngrok-skip-browser-warning": "true"
-      }
-    });
-    return r.json();
+    try {
+      const r = await fetch(`${API_BASE}${path}`, {
+        headers: {
+          "Bypass-Tunnel-Reminder": "true",
+          "ngrok-skip-browser-warning": "true"
+        }
+      });
+      return r.json();
+    } catch (e) {
+      console.error(`[SOCIONET] API GET ${path} failed:`, e);
+      return null;
+    }
   },
   post: async (path: string, body: any) => {
-    const r = await fetch(`${API_BASE}${path}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Bypass-Tunnel-Reminder": "true",
-        "ngrok-skip-browser-warning": "true"
-      },
-      body: JSON.stringify(body),
-    });
-    return r.json();
+    try {
+      const r = await fetch(`${API_BASE}${path}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Bypass-Tunnel-Reminder": "true",
+          "ngrok-skip-browser-warning": "true"
+        },
+        body: JSON.stringify(body),
+      });
+      return r.json();
+    } catch (e) {
+      console.error(`[SOCIONET] API POST ${path} failed:`, e);
+      return null;
+    }
   },
   del: async (path: string) => {
-    const r = await fetch(`${API_BASE}${path}`, {
-      method: "DELETE",
-      headers: {
-        "Bypass-Tunnel-Reminder": "true",
-        "ngrok-skip-browser-warning": "true"
-      }
-    });
-    return r.json();
+    try {
+      const r = await fetch(`${API_BASE}${path}`, {
+        method: "DELETE",
+        headers: {
+          "Bypass-Tunnel-Reminder": "true",
+          "ngrok-skip-browser-warning": "true"
+        }
+      });
+      return r.json();
+    } catch (e) {
+      console.error(`[SOCIONET] API DELETE ${path} failed:`, e);
+      return null;
+    }
   },
 };
 
