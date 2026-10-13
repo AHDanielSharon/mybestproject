@@ -473,7 +473,7 @@ app.post("/notifications/read/:id", (req, res) => {
 // ── HEALTH ────────────────────────────────────────────────────────────────
 app.get("/health", (req, res) => res.json({ ok: true, users: Object.keys(db.profiles).length, videos: db.videos.length }));
 
-const PORT = 4000;
+const PORT = Number(process.env.PORT) || 4000;
 server.listen(PORT, () => {
   console.log(`🚀 SOCIONET backend running on http://localhost:${PORT}`);
   console.log(`📦 ${Object.keys(db.profiles).length} profiles | ${db.videos.length} videos | ${db.messages.length} messages`);

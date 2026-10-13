@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build && pnpm copy:env",
+    "build:skip-bindings": "vite build && pnpm copy:env",
     "copy:env": "node -e \"require('fs').copyFileSync('env.json', 'dist/env.json')\"",
     "typecheck": "tsc --noEmit",
     "check": "biome check src",
@@ -74,7 +75,6 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.2.1",
-    "firebase": "^12.14.0",
     "input-otp": "^1.4.1",
     "lucide-react": "0.511.0",
     "motion": "^12.34.3",

@@ -33,7 +33,7 @@ function WelcomeScreen({ onComplete }: { onComplete: () => void }) {
     setTapped(true);
 
     // Play audios — now safe because this is inside a user gesture handler
-    const namasteAudio = new Audio("/sounds/namaste.mp3");
+    const namasteAudio = new Audio("/sounds/welcome.mp3");
     const bgmAudio = new Audio("/sounds/background.mp3");
     bgmAudio.volume = 0.4;
 

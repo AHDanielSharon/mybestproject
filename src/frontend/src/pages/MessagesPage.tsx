@@ -25,10 +25,6 @@ import {
 import { useEffect, useRef, useState } from "react";
 import type { SignalingEntryPublic } from "../backend";
 import { ExternalBlob, FriendRequestStatus } from "../backend";
-import {
-  broadcastCallNotification,
-  clearCallNotification,
-} from "../components/GlobalCallManager";
 import VideoCallDialog, {
   IncomingCallBanner,
   deriveSessionId,
@@ -44,6 +40,7 @@ import {
   useGetMessagesWithUser,
   useGetSignalingData,
   useGetUserProfile,
+  useInitiateVideoCall,
   useRejectFriendRequest,
   useSearchUsers,
   useSendFriendRequest,
@@ -239,6 +236,7 @@ export default function MessagesPage() {
   const acceptFriendRequestMutation = useAcceptFriendRequest();
   const rejectFriendRequestMutation = useRejectFriendRequest();
   const sendMessageMutation = useSendMessage();
+  const initiateCall = useInitiateVideoCall();
   const clearSignaling = useClearSignalingData();
 
   const currentUserPrincipal = identity?.getPrincipal()?.toString();
@@ -380,14 +378,14 @@ export default function MessagesPage() {
     setCallType("video");
     setIsCallInitiator(true);
     setVideoCallOpen(true);
-    broadcastCallNotification(pText(selectedFriend), currentUserPrincipal, "video");
+    initiateCall.mutate(selectedFriend);
   };
   const handleStartAudioCall = () => {
     if (!selectedFriend || !currentUserPrincipal) return;
     setCallType("audio");
     setIsCallInitiator(true);
     setVideoCallOpen(true);
-    broadcastCallNotification(pText(selectedFriend), currentUserPrincipal, "audio");
+    initiateCall.mutate(selectedFriend);
   };
   const handleAcceptIncomingCall = () => {
     setIncomingCallOffer(null);
@@ -778,7 +776,6 @@ export default function MessagesPage() {
               setVideoCallOpen(false);
               setIncomingCallOffer(null);
               setIncomingCallPrincipal(null);
-              if (selectedFriend) clearCallNotification(pText(selectedFriend));
             }}
             recipientPrincipal={pText(selectedFriend)}
             callerPrincipal={currentUserPrincipal}

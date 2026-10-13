@@ -188,6 +188,7 @@ export interface _SERVICE {
   'acceptFriendRequest' : ActorMethod<[Principal], undefined>,
   'addComment' : ActorMethod<[string, Comment], undefined>,
   'adminCancelPayment' : ActorMethod<[string, string], undefined>,
+  'adminCreditBalance' : ActorMethod<[Principal, bigint], undefined>,
   'adminDeleteStory' : ActorMethod<[string], undefined>,
   'adminDeleteVideo' : ActorMethod<[string], undefined>,
   'adminDownload' : ActorMethod<[ExternalBlob], undefined>,

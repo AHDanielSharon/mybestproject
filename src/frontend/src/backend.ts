@@ -295,6 +295,7 @@ export interface backendInterface {
     acceptFriendRequest(sender: Principal): Promise<void>;
     addComment(reelId: string, comment: Comment): Promise<void>;
     adminCancelPayment(transactionId: string, reason: string): Promise<void>;
+    adminCreditBalance(user: Principal, amount: bigint): Promise<void>;
     adminDeleteStory(storyId: string): Promise<void>;
     adminDeleteVideo(id: string): Promise<void>;
     adminDownload(blob: ExternalBlob): Promise<void>;
@@ -504,6 +505,20 @@ export class Backend implements backendInterface {
             }
         } else {
             const result = await this.actor.addComment(arg0, arg1);
+            return result;
+        }
+    }
+    async adminCreditBalance(arg0: Principal, arg1: bigint): Promise<void> {
+        if (this.processError) {
+            try {
+                const result = await this.actor.adminCreditBalance(arg0, arg1);
+                return result;
+            } catch (e) {
+                this.processError(e);
+                throw new Error("unreachable");
+            }
+        } else {
+            const result = await this.actor.adminCreditBalance(arg0, arg1);
             return result;
         }
     }

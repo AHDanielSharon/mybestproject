@@ -1,16 +1,16 @@
 import Map "mo:core/Map";
 import Principal "mo:core/Principal";
 import Text "mo:core/Text";
+import Iter "mo:core/Iter";
 import OutCall "mo:caffeineai-http-outcalls/outcall";
 import Types "../types/push-notifications";
 
 module {
   // ---------------------------------------------------------------------------
-  // VAPID credentials (ECDSA P-256)
-  // Public key is included in every push request header.
-  // The JWT is a long-lived token signed offline with the matching private key
-  // (private key: UUxI4O8-FbRouAevSmBQ6o18hgE4nSG3qwvJTfKc-ls).
-  // To refresh when the token expires, call setVapidJwt() as admin.
+  // VAPID (RFC 8292)
+  // The public key is safe to publish. The matching PRIVATE key must never be
+  // stored in source code or in this canister. Sign the VAPID JWT offline with
+  // the private key (ES256, expiry <= 24h) and load it with setVapidJwt().
   // ---------------------------------------------------------------------------
 
   /// VAPID public key (URL-safe base64, uncompressed P-256 point).
@@ -22,17 +22,17 @@ module {
   // ---------------------------------------------------------------------------
 
   public func register(
-    subs   : Map.Map<Principal, Types.PushSubscription>,
+    subs : Map.Map<Principal, Types.PushSubscription>,
     caller : Principal,
-    endpoint  : Text,
+    endpoint : Text,
     p256dhKey : Text,
-    authKey   : Text,
+    authKey : Text,
   ) {
     subs.add(caller, { endpoint; p256dhKey; authKey });
   };
 
   public func remove(
-    subs   : Map.Map<Principal, Types.PushSubscription>,
+    subs : Map.Map<Principal, Types.PushSubscription>,
     caller : Principal,
   ) {
     subs.remove(caller);
@@ -49,83 +49,93 @@ module {
   // JSON helpers
   // ---------------------------------------------------------------------------
 
-  /// Escape a plain-text string for embedding in a JSON value.
-  func jsonText(s : Text) : Text {
-    "\"" # s # "\"";
+  /// Escape a string for use inside a JSON string literal.
+  /// Quotes and backslashes are escaped; control characters become spaces.
+  public func jsonEscape(s : Text) : Text {
+    var out = "";
+    for (c in s.chars()) {
+      let t = Text.fromChar(c);
+      let piece = if (t == "\"") { "\\\"" } else if (t == "\\") { "\\\\" } else if (c < ' ') { " " } else { t };
+      out := out # piece;
+    };
+    out;
   };
 
   // ---------------------------------------------------------------------------
-  // HTTP outcall with up to 2 retries
+  // Web Push delivery
   // ---------------------------------------------------------------------------
 
-  /// Build the VAPID Authorization header value.
-  /// Format: vapid t=<jwt>,k=<publicKey>
+  /// Build the VAPID Authorization header value (RFC 8292 section 3.1 form).
   func vapidAuthHeader(vapidJwt : Text) : Text {
     "vapid t=" # vapidJwt # ",k=" # VAPID_PUBLIC_KEY;
   };
 
-  /// Fire-and-forget POST to a Web Push endpoint.
-  /// Includes VAPID Authorization and TTL headers so the push service
-  /// delivers the notification to locked/background devices.
-  /// Returns silently on failure after up to 2 retries.
+  /// Sends a content-free ("tickle") Web Push to an endpoint.
+  ///
+  /// Why no body: a push message with a payload must be encrypted with the
+  /// subscriber's keys (RFC 8291 aes128gcm). That encryption is not implemented
+  /// here, so push services would reject a plaintext body. An empty push is
+  /// valid, and the service worker shows a generic alert; the app loads the
+  /// details from the canister when it opens.
+  ///
+  /// Returns true if the push service accepted the message (HTTP 2xx).
   public func sendPush(
-    endpoint  : Text,
-    jsonBody  : Text,
-    vapidJwt  : Text,
+    endpoint : Text,
+    vapidJwt : Text,
     transform : OutCall.Transform,
-  ) : async () {
+  ) : async Bool {
+    if (vapidJwt == "") { return false };
     let headers : [OutCall.Header] = [
-      { name = "Content-Type";   value = "application/json" },
-      { name = "TTL";            value = "86400" },
-      { name = "Authorization";  value = vapidAuthHeader(vapidJwt) },
+      { name = "TTL"; value = "3600" },
+      { name = "Authorization"; value = vapidAuthHeader(vapidJwt) },
     ];
     var attempt = 0;
     var sent = false;
     label retry while (attempt < 3 and not sent) {
       attempt += 1;
       try {
-        ignore await OutCall.httpPostRequest(endpoint, headers, jsonBody, transform);
+        let response = await OutCall.httpPostRequest(endpoint, headers, "", transform);
         sent := true;
+        ignore response;
       } catch (_) {
-        // retry on failure; give up silently after 3 attempts
+        // Retry up to 3 times, then give up silently.
       };
     };
+    sent;
   };
 
   // ---------------------------------------------------------------------------
-  // Payload builders
+  // Payload builders (kept for the in-app notification feed and for the
+  // future encrypted-payload path; not sent over the wire today).
   // ---------------------------------------------------------------------------
 
   /// Payload for incoming-call push notifications.
-  /// Fields match the service worker handler expectations.
   public func callPayload(
     callerPrincipal : Text,
-    callerName      : Text,
-    sessionId       : Text,
+    callerName : Text,
+    sessionId : Text,
   ) : Text {
     "{" #
-      "\"type\":\"incoming-call\"," #
-      "\"callerName\":" # jsonText(callerName) # "," #
-      "\"callSessionId\":" # jsonText(sessionId) # "," #
-      "\"callerPrincipal\":" # jsonText(callerPrincipal) # "," #
-      "\"ringDuration\":45" #
+    "\"type\":\"incoming-call\"," #
+    "\"callerName\":\"" # jsonEscape(callerName) # "\"," #
+    "\"callSessionId\":\"" # jsonEscape(sessionId) # "\"," #
+    "\"callerPrincipal\":\"" # jsonEscape(callerPrincipal) # "\"," #
+    "\"ringDuration\":45" #
     "}";
   };
 
-  /// Payload for new-message push notifications.
-  /// Fields match the service worker handler expectations.
+  /// Payload for new-message push notifications (preview limited to 50 chars).
   public func messagePayload(
     senderPrincipal : Text,
-    senderName      : Text,
-    preview         : Text,
+    senderName : Text,
+    preview : Text,
   ) : Text {
-    // Limit preview to first 50 characters
-    let p = Text.fromIter(preview.toIter().take(50));
+    let p = Text.fromIter(Iter.take(preview.chars(), 50));
     "{" #
-      "\"type\":\"new-message\"," #
-      "\"senderName\":" # jsonText(senderName) # "," #
-      "\"preview\":" # jsonText(p) # "," #
-      "\"senderId\":" # jsonText(senderPrincipal) #
+    "\"type\":\"new-message\"," #
+    "\"senderName\":\"" # jsonEscape(senderName) # "\"," #
+    "\"preview\":\"" # jsonEscape(p) # "\"," #
+    "\"senderId\":\"" # jsonEscape(senderPrincipal) # "\"" #
     "}";
   };
 };

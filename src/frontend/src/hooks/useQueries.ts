@@ -459,6 +459,21 @@ export function useGetAllMessages() {
   });
 }
 
+/** Places a call: the canister stores a videoCall notification and sends a push tickle. */
+export function useInitiateVideoCall() {
+  const { actor } = useActor(createActor);
+
+  return useMutation({
+    mutationFn: async (receiver: Principal) => {
+      if (!actor) throw new Error("Actor not available");
+      return actor.initiateVideoCall(receiver);
+    },
+    onError: (error: Error) => {
+      toast.error(`Could not start the call: ${error.message}`);
+    },
+  });
+}
+
 export function useStartChatWithUser() {
   const { actor } = useActor(createActor);
   const queryClient = useQueryClient();

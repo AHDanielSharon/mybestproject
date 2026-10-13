@@ -202,6 +202,7 @@ export interface backendInterface {
     acceptFriendRequest(sender: Principal): Promise<void>;
     addComment(reelId: string, comment: Comment): Promise<void>;
     adminCancelPayment(transactionId: string, reason: string): Promise<void>;
+    adminCreditBalance(user: Principal, amount: bigint): Promise<void>;
     adminDeleteStory(storyId: string): Promise<void>;
     adminDeleteVideo(id: string): Promise<void>;
     adminDownload(blob: ExternalBlob): Promise<void>;

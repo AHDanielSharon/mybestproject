@@ -1,10 +1,21 @@
 import { useInternetIdentity } from "@caffeineai/core-infrastructure";
+import { Principal } from "@icp-sdk/core/principal";
 import { Phone, PhoneOff, Video } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useClearSignalingData, useGetSignalingData } from "../hooks/useQueries";
-import { useGetUserProfile } from "../hooks/useQueries";
-import { SESSION_USER } from "../lib/core-infrastructure-mock";
+import { NotificationType } from "../backend";
+import { useClearSignalingData, useGetUserNotifications, useGetUserProfile } from "../hooks/useQueries";
 import VideoCallDialog, { deriveSessionId } from "./VideoCallDialog";
+
+// `vibrate` and `actions` are real Notification options on Chromium/Android but are missing from TypeScript's lib.dom.
+declare global {
+  interface NotificationOptions {
+    vibrate?: number[];
+    actions?: { action: string; title: string; icon?: string }[];
+  }
+}
+
+/** A ring is only shown for calls placed within this window (ms). */
+const RING_WINDOW_MS = 45_000;
 
 // ─── Ringtone ─────────────────────────────────────────────────────────────────
 function useRingtone() {
@@ -64,7 +75,7 @@ function IncomingCallScreen({
   onAccept: () => void;
   onDecline: () => void;
 }) {
-  const { data: callerProfile } = useGetUserProfile({ toText: () => callerPrincipal } as any);
+  const { data: callerProfile } = useGetUserProfile(Principal.fromText(callerPrincipal));
   const ringtone = useRingtone();
   const callerName = callerProfile?.name || "Unknown";
   const initials = callerName.slice(0, 2).toUpperCase();
@@ -183,167 +194,90 @@ function IncomingCallScreen({
 }
 
 // ─── GlobalCallManager ────────────────────────────────────────────────────────
-// Mount this ONCE at the app root. It polls localStorage AND backend signaling
-// every 1.5s for any incoming call notification and shows the full-screen overlay.
-import { onServerEvent } from "../mocks/backend";
+type IncomingCall = {
+  callerPrincipal: string;
+  callType: "video" | "audio";
+  sessionId: string;
+};
 
+/**
+ * Mounted once at the app root. Incoming calls are read from the canister's own
+ * notifications (a `videoCall` notification is written by `initiateVideoCall`),
+ * so they work across devices and browsers, not just in the same browser.
+ */
 export default function GlobalCallManager() {
   const { identity } = useInternetIdentity();
-  const myPrincipal = identity?.getPrincipal()?.toString() || SESSION_USER;
+  const myPrincipal = identity?.getPrincipal()?.toString() ?? "";
 
-  const [incomingCall, setIncomingCall] = useState<{
-    callerPrincipal: string;
-    callType: "video" | "audio";
-    sessionId: string;
-  } | null>(null);
-
-  const [callOpen, setCallOpen] = useState(false);
-  const [callerName, setCallerName] = useState<string | undefined>(undefined);
-  const [activeSessionId, setActiveSessionId] = useState<string>("");
-  const callerPrincipalRef = useRef<string>("");
-
-  const [backendCallSessionId, setBackendCallSessionId] = useState<string>("");
-  const { data: backendSignaling } = useGetSignalingData(backendCallSessionId, !!backendCallSessionId && !callOpen && !incomingCall);
-
-  const { data: callerProfile } = useGetUserProfile(
-    incomingCall ? ({ toText: () => incomingCall.callerPrincipal } as any) : null
-  );
+  const { data: notifications } = useGetUserNotifications(); // polls every 5s
   const clearSignaling = useClearSignalingData();
 
-  // Poll localStorage for local/same-browser notifications
+  const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
+  const [callOpen, setCallOpen] = useState(false);
+  const [callerName, setCallerName] = useState<string | undefined>(undefined);
+  const callerPrincipalRef = useRef<string>("");
+  // Notifications already shown or dismissed in this tab (key = sender + timestamp).
+  const handledRef = useRef<Set<string>>(new Set());
+
+  const { data: callerProfile } = useGetUserProfile(
+    incomingCall ? Principal.fromText(incomingCall.callerPrincipal) : null,
+  );
+
+  // Detect a fresh incoming video call in the canister's notifications.
   useEffect(() => {
-    if (!myPrincipal) return;
-    const poll = setInterval(() => {
-      try {
-        const key = `incoming_call_for_${myPrincipal}`;
-        const raw = localStorage.getItem(key);
-        if (!raw) return;
-        const parsed = JSON.parse(raw);
-        if (Date.now() - parsed.timestamp > 60000) {
-          localStorage.removeItem(key);
-          return;
-        }
-        if (!incomingCall && !callOpen) {
-          const sessionId = deriveSessionId(parsed.callerPrincipal, myPrincipal);
-          setBackendCallSessionId(sessionId);
-          setIncomingCall({
-            callerPrincipal: parsed.callerPrincipal,
-            callType: parsed.callType || "video",
-            sessionId,
+    if (!myPrincipal || !notifications || incomingCall || callOpen) return;
+    const now = Date.now();
+    const fresh = notifications
+      .filter((n) => n.notificationType === NotificationType.videoCall)
+      .filter((n) => now - Number(n.timestamp / 1_000_000n) < RING_WINDOW_MS)
+      .sort((a, b) => (a.timestamp > b.timestamp ? -1 : 1));
+    for (const n of fresh) {
+      const key = `${n.sender.toText()}_${n.timestamp.toString()}`;
+      if (handledRef.current.has(key)) continue;
+      handledRef.current.add(key);
+      const caller = n.sender.toText();
+      setIncomingCall({
+        callerPrincipal: caller,
+        callType: "video",
+        sessionId: deriveSessionId(caller, myPrincipal),
+      });
+      // Show a system notification when the app is in the background.
+      if ("serviceWorker" in navigator && "Notification" in window && Notification.permission === "granted" && document.hidden) {
+        navigator.serviceWorker.ready.then((reg) => {
+          reg.showNotification("Incoming Video Call", {
+            body: "Someone is calling you... Tap to answer.",
+            icon: "/assets/generated/socionet-pwa-icon-192.dim_192x192.png",
+            tag: `incoming-call-${key}`,
+            requireInteraction: true,
+            vibrate: [500, 200, 500, 200, 500],
+            data: { type: "incoming-call", callerPrincipal: caller, callSessionId: deriveSessionId(caller, myPrincipal), url: "/" },
           });
-
-          if ("serviceWorker" in navigator && "Notification" in window && Notification.permission === "granted") {
-            navigator.serviceWorker.ready.then((reg) => {
-              reg.showNotification(`Incoming ${parsed.callType === "audio" ? "Voice" : "Video"} Call`, {
-                body: `Someone is calling you... Tap to answer.`,
-                icon: '/assets/generated/socionet-pwa-icon-192.dim_192x192.png',
-                tag: `incoming-call-${sessionId}`,
-                requireInteraction: true,
-                vibrate: [
-                  500, 200, 500, 200, 500, 200,
-                  500, 200, 500, 200, 500, 200
-                ],
-                data: {
-                  type: 'incoming-call',
-                  callerPrincipal: parsed.callerPrincipal,
-                  callSessionId: sessionId,
-                  url: `/`
-                },
-                actions: [
-                  { action: 'accept', title: '✅ Accept' },
-                  { action: 'decline', title: '❌ Decline' }
-                ]
-              });
-            });
-          }
-        }
-      } catch { /* ignore parse errors */ }
-    }, 1500);
-    return () => clearInterval(poll);
-  }, [myPrincipal, incomingCall, callOpen]);
-
-  // Listen to WebSocket events for cross-device global calls
-  useEffect(() => {
-    if (!myPrincipal) return;
-    const unsubRing = onServerEvent("incoming_call", (data: any) => {
-      if (data.recipientPrincipal === myPrincipal && !callOpen && !incomingCall) {
-        setBackendCallSessionId(data.sessionId);
-        setIncomingCall({
-          callerPrincipal: data.callerPrincipal,
-          callType: data.callType || "video",
-          sessionId: data.sessionId,
         });
-
-        // Trigger native mobile notification
-        if ("serviceWorker" in navigator && "Notification" in window && Notification.permission === "granted") {
-          navigator.serviceWorker.ready.then((reg) => {
-            reg.showNotification(`Incoming ${data.callType === "audio" ? "Voice" : "Video"} Call`, {
-              body: `Someone is calling you... Tap to answer.`,
-              icon: '/assets/generated/socionet-pwa-icon-192.dim_192x192.png',
-              tag: `incoming-call-${data.sessionId}`,
-              requireInteraction: true,
-              vibrate: [
-                500, 200, 500, 200, 500, 200,
-                500, 200, 500, 200, 500, 200
-              ],
-              data: {
-                type: 'incoming-call',
-                callerPrincipal: data.callerPrincipal,
-                callSessionId: data.sessionId,
-                url: `/`
-              },
-              actions: [
-                { action: 'accept', title: '✅ Accept' },
-                { action: 'decline', title: '❌ Decline' }
-              ]
-            });
-          });
-        }
       }
-    });
-
-    const unsubCancel = onServerEvent("cancel_call", (data: any) => {
-      if (data.recipientPrincipal === myPrincipal) {
-        setIncomingCall(null);
-      }
-    });
-
-    return () => {
-      unsubRing();
-      unsubCancel();
-    };
-  }, [myPrincipal, callOpen, incomingCall]);
+      break;
+    }
+  }, [notifications, myPrincipal, incomingCall, callOpen]);
 
   // Update caller name when profile loads
   useEffect(() => {
     if (callerProfile?.name) setCallerName(callerProfile.name);
   }, [callerProfile]);
 
-  const clearNotification = () => {
-    if (!myPrincipal) return;
-    clearCallNotification(myPrincipal);
-  };
-
   const handleAccept = () => {
     if (!incomingCall) return;
-    clearNotification();
     callerPrincipalRef.current = incomingCall.callerPrincipal;
-    setActiveSessionId(incomingCall.sessionId);
     setCallOpen(true);
     setIncomingCall(null);
   };
 
   const handleDecline = () => {
     if (!incomingCall) return;
-    clearNotification();
     clearSignaling.mutate({ sessionId: incomingCall.sessionId });
     setIncomingCall(null);
   };
 
   const handleCallClose = () => {
     setCallOpen(false);
-    setActiveSessionId("");
-    clearNotification();
   };
 
   return (
@@ -371,42 +305,4 @@ export default function GlobalCallManager() {
       )}
     </>
   );
-}
-
-// ─── Call broadcaster (call this when initiating a call) ─────────────────────
-export async function broadcastCallNotification(
-  recipientPrincipal: string,
-  callerPrincipal: string,
-  callType: "video" | "audio",
-) {
-  const sessionId = deriveSessionId(callerPrincipal, recipientPrincipal);
-  
-  // 1. Local storage for same-browser fallback
-  const key = `incoming_call_for_${recipientPrincipal}`;
-  localStorage.setItem(
-    key,
-    JSON.stringify({ callerPrincipal, callType, sessionId, timestamp: Date.now() })
-  );
-
-  // 2. Global push via backend WebSockets
-  try {
-    await fetch("/api/call/ring", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipientPrincipal, callerPrincipal, callType, sessionId })
-    });
-  } catch (err) {
-    console.error("Global call broadcast failed", err);
-  }
-}
-
-export async function clearCallNotification(recipientPrincipal: string) {
-  localStorage.removeItem(`incoming_call_for_${recipientPrincipal}`);
-  try {
-    await fetch("/api/call/cancel", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ recipientPrincipal })
-    });
-  } catch (err) {}
 }

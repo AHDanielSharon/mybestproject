@@ -59,7 +59,35 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can save profiles");
     };
-    userProfiles.add(caller, profile);
+    if (profile.name.size() == 0 or profile.name.size() > 50) {
+      Runtime.trap("Name must be 1-50 characters");
+    };
+    switch (profile.bio) {
+      case (?bio) { if (bio.size() > 500) { Runtime.trap("Bio must be at most 500 characters") } };
+      case (null) {};
+    };
+    // The balance is ledger state. Users must not be able to set it, so keep the stored value.
+    let currentBalance = switch (userProfiles.get(caller)) {
+      case (?existing) { existing.balance };
+      case (null) { 0 };
+    };
+    userProfiles.add(caller, { profile with balance = currentBalance });
+  };
+
+  /// Admin top-up: the only way balance enters the system (demo ledger).
+  public shared ({ caller }) func adminCreditBalance(user : Principal, amount : Nat) : async () {
+    if (not (AccessControl.hasPermission(accessControlState, caller, #admin))) {
+      Runtime.trap("Unauthorized: Only admins can credit balances");
+    };
+    if (amount == 0) { Runtime.trap("Amount must be greater than zero") };
+    creditBalance(user, amount);
+  };
+
+  func creditBalance(user : Principal, amount : Nat) {
+    switch (userProfiles.get(user)) {
+      case (null) { Runtime.trap("Profile not found") };
+      case (?profile) { userProfiles.add(user, { profile with balance = profile.balance + amount }) };
+    };
   };
 
   public query ({ caller }) func getAllUserProfiles() : async [(Principal, UserProfile)] {
@@ -427,7 +455,9 @@ actor {
       Runtime.trap("Unauthorized: Only users can send friend requests");
     };
     if (caller == recipient) { Runtime.trap("Cannot send a friend request to yourself") };
-
+    if (areFriends(caller, recipient) or hasPendingRequest(caller, recipient)) {
+      Runtime.trap("A friend request already exists between these users");
+    };
     let requestId = caller.toText() # "_" # recipient.toText();
     let newRequest : FriendRequest = {
       sender = caller;
@@ -444,6 +474,18 @@ actor {
     ignore createNotificationInternal(#friendRequest, senderName, caller, recipient, "sent you a friend request");
   };
 
+  func hasPendingRequest(user1 : Principal, user2 : Principal) : Bool {
+    switch (friendRequests.get(user1.toText() # "_" # user2.toText())) {
+      case (?r) { r.status == #pending };
+      case (null) {
+        switch (friendRequests.get(user2.toText() # "_" # user1.toText())) {
+          case (?r) { r.status == #pending };
+          case (null) { false };
+        };
+      };
+    };
+  };
+
   public shared ({ caller }) func acceptFriendRequest(sender : Principal) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can accept friend requests");
@@ -455,6 +497,7 @@ actor {
         if (request.recipient != caller) {
           Runtime.trap("Unauthorized: You can only accept friend requests sent to you");
         };
+        if (request.status != #pending) { Runtime.trap("Friend request is not pending") };
         let updatedRequest : FriendRequest = {
           sender;
           recipient = caller;
@@ -482,6 +525,7 @@ actor {
         if (request.recipient != caller) {
           Runtime.trap("Unauthorized: You can only reject friend requests sent to you");
         };
+        if (request.status != #pending) { Runtime.trap("Friend request is not pending") };
         let updatedRequest : FriendRequest = {
           sender;
           recipient = caller;
@@ -608,7 +652,10 @@ actor {
     if (caller == recipient) {
       Runtime.trap("Cannot send a message to yourself");
     };
-
+    if (not areFriends(caller, recipient)) {
+      Runtime.trap("You can only message accepted friends");
+    };
+    if (content.size() > 5000) { Runtime.trap("Message is too long (max 5000 characters)") };
     let threadId = getThreadId(caller, recipient);
 
     let newMessage : Message = {
@@ -634,7 +681,7 @@ actor {
     ignore createNotificationInternal(#newMessage, senderName, caller, recipient, "You received a new message from " # senderName);
 
     // Fire push notification to wake recipient's device (even when app is closed)
-    await sendMessagePushNotification(caller, recipient, content);
+    await sendMessagePushNotification(caller, recipient);
   };
 
   func areFriends(user1 : Principal, user2 : Principal) : Bool {
@@ -691,7 +738,7 @@ actor {
     if (caller == targetUser) {
       return false;
     };
-    true;
+    areFriends(caller, targetUser);
   };
 
   type ChatThread = {
@@ -709,7 +756,9 @@ actor {
     if (caller == targetUser) {
       Runtime.trap("Cannot start a chat with yourself");
     };
-
+    if (not areFriends(caller, targetUser)) {
+      Runtime.trap("You can only chat with accepted friends");
+    };
     let threadId = getThreadId(caller, targetUser);
 
     switch (chatThreads.get(threadId)) {
@@ -736,18 +785,44 @@ actor {
 
   stable var reelStats : Map.Map<Text, ReelStats> = Map.empty<Text, ReelStats>();
 
+  // One vote per user per reel. Key: reelId # "|" # principal.
+  stable var reelVotes : Map.Map<Text, { #like; #dislike }> = Map.empty<Text, { #like; #dislike }>();
+
+  func setReelVote(reelId : Text, caller : Principal, vote : { #like; #dislike }) {
+    let key = reelId # "|" # caller.toText();
+    let previous = reelVotes.get(key);
+    if (previous == ?vote) { return };
+    reelVotes.add(key, vote);
+    updateReelStats(
+      reelId,
+      func(stats) {
+        var likes = stats.likes;
+        var dislikes = stats.dislikes;
+        switch (previous) {
+          case (?#like) { likes -= 1 };
+          case (?#dislike) { dislikes -= 1 };
+          case (null) {};
+        };
+        switch (vote) {
+          case (#like) { likes += 1 };
+          case (#dislike) { dislikes += 1 };
+        };
+        { stats with likes; dislikes };
+      },
+    );
+  };
+
   public shared ({ caller }) func likeReel(reelId : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can like reels");
     };
-    updateReelStats(reelId, func(stats) { { stats with likes = stats.likes + 1 } });
+    setReelVote(reelId, caller, #like);
   };
-
   public shared ({ caller }) func dislikeReel(reelId : Text) : async () {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can dislike reels");
     };
-    updateReelStats(reelId, func(stats) { { stats with dislikes = stats.dislikes + 1 } });
+    setReelVote(reelId, caller, #dislike);
   };
 
   public type Comment = {
@@ -759,9 +834,17 @@ actor {
     if (not (AccessControl.hasPermission(accessControlState, caller, #user))) {
       Runtime.trap("Unauthorized: Only users can comment on reels");
     };
+    if (comment.text.size() == 0 or comment.text.size() > 1000) {
+      Runtime.trap("Comment must be 1-1000 characters");
+    };
+    // The author is taken from the caller's profile, never from the client.
+    let author = switch (userProfiles.get(caller)) {
+      case (?profile) { profile.name };
+      case (null) { "Unknown User" };
+    };
     updateReelStats(reelId, func(stats) {
       let commentsList = List.fromArray<Comment>(stats.comments);
-      commentsList.add(comment);
+      commentsList.add({ author; text = comment.text });
       { stats with comments = commentsList.toArray() };
     });
   };
@@ -871,8 +954,11 @@ actor {
 
   stable var notifications : Map.Map<Text, Notification> = Map.empty<Text, Notification>();
 
+  stable var notificationCounter : Nat = 0;
+
   func createNotificationInternal(notificationType : NotificationType, senderName : Text, sender : Principal, recipient : Principal, content : Text) : Text {
-    let notificationId = "notification_" # Time.now().toText();
+    let notificationId = "notification_" # notificationCounter.toText();
+    notificationCounter += 1;
 
     let notification : Notification = {
       notificationType;
@@ -1121,12 +1207,16 @@ actor {
         if (transaction.sender != caller) {
           Runtime.trap("Unauthorized: Only the payment sender can fail this transaction");
         };
+        if (transaction.status != #pending and transaction.status != #processing) {
+          Runtime.trap("Only pending or processing payments can be failed");
+        };
         let updatedTransaction = {
-          transaction with 
+          transaction with
           status = #failed;
           failureReason = ?reason;
         };
         paymentTransactions.add(transactionId, updatedTransaction);
+        creditBalance(caller, transaction.amount);
         let senderName = switch (userProfiles.get(caller)) {
           case (?profile) { profile.name };
           case (null) { "Unknown User" };
@@ -1182,8 +1272,11 @@ actor {
     switch (paymentTransactions.get(transactionId)) {
       case (null) { Runtime.trap("Transaction not found") };
       case (?transaction) {
+        if (transaction.status != #pending and transaction.status != #processing) {
+          Runtime.trap("Only pending or processing payments can be cancelled");
+        };
         let updatedTransaction = {
-          transaction with 
+          transaction with
           status = #failed;
           failureReason = ?("Admin cancelled: " # reason);
         };
@@ -1201,14 +1294,7 @@ actor {
           "Payment cancelled by admin: " # reason
         );
 
-        let senderProfile = switch (userProfiles.get(transaction.sender)) {
-          case (null) { Runtime.trap("Sender profile not found") };
-          case (?profile) { profile };
-        };
-        let updatedSenderProfile = {
-          senderProfile with balance = senderProfile.balance + transaction.amount;
-        };
-        userProfiles.add(transaction.sender, updatedSenderProfile);
+        creditBalance(transaction.sender, transaction.amount);
       };
     };
   };
@@ -1290,16 +1376,15 @@ actor {
 
   // WebRTC Signaling State
   let signalingData = Map.empty<Text, List.List<WebRTCSignalingTypes.SignalingEntry>>();
-  include WebRTCSignalingAPI(signalingData);
+  include WebRTCSignalingAPI(signalingData, func(p : Principal) : Bool { AccessControl.hasPermission(accessControlState, p, #user) });
 
   // Push Notification Subscriptions
   stable var pushSubscriptions : Map.Map<Principal, PushNotificationTypes.PushSubscription> = Map.empty<Principal, PushNotificationTypes.PushSubscription>();
-  include PushNotificationsAPI(pushSubscriptions, transform);
+  include PushNotificationsAPI(pushSubscriptions, transform, func(p : Principal) : Bool { AccessControl.hasPermission(accessControlState, p, #user) });
 
-  // VAPID JWT for Web Push Authorization header.
-  // This is a long-lived token (signed with the VAPID private key offline).
-  // Refresh by calling setVapidJwt() as admin when expired.
-  // Private key: UUxI4O8-FbRouAevSmBQ6o18hgE4nSG3qwvJTfKc-ls
+  // VAPID JWT (RFC 8292) for the Web Push Authorization header. It is signed
+  // offline with the VAPID private key, which is never stored in the canister.
+  // The JWT expires within 24h, so an admin must refresh it with setVapidJwt().
   stable var vapidJwt : Text = "";
 
   public shared ({ caller }) func setVapidJwt(jwt : Text) : async () {
@@ -1333,22 +1418,16 @@ actor {
         } else {
           receiver.toText() # "_" # callerPrincipal.toText();
         };
-        let body = PushLib.callPayload(callerPrincipal.toText(), callerName, sessionId);
-        await PushLib.sendPush(sub.endpoint, body, vapidJwt, transform);
+        ignore await PushLib.sendPush(sub.endpoint, vapidJwt, transform);
       };
     };
   };
 
-  func sendMessagePushNotification(sender : Principal, recipient : Principal, messagePreview : Text) : async () {
+  func sendMessagePushNotification(sender : Principal, recipient : Principal) : async () {
     switch (PushLib.get(pushSubscriptions, recipient)) {
       case (null) {};
       case (?sub) {
-        let senderName = switch (userProfiles.get(sender)) {
-          case (?profile) { profile.name };
-          case (null) { "Unknown User" };
-        };
-        let body = PushLib.messagePayload(sender.toText(), senderName, messagePreview);
-        await PushLib.sendPush(sub.endpoint, body, vapidJwt, transform);
+        ignore await PushLib.sendPush(sub.endpoint, vapidJwt, transform);
       };
     };
   };
@@ -1363,6 +1442,9 @@ actor {
 
     if (caller == receiver) {
       Runtime.trap("Cannot initiate a video call with yourself");
+    };
+    if (not areFriends(caller, receiver)) {
+      Runtime.trap("You can only call accepted friends");
     };
 
     // Verify both users exist
@@ -1402,6 +1484,7 @@ actor {
     if (caller == receiver) {
       Runtime.trap("Cannot record a video call with yourself");
     };
+    if (endTime < startTime) { Runtime.trap("End time is before start time") };
 
     // Verify both participants are registered users
     switch (userProfiles.get(caller)) {

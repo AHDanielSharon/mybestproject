@@ -2,3 +2,9 @@ node_modules
 dist
 build
 .env
+# Local demo data and build/tunnel logs (not source)
+socionet_db.json
+vite_out.txt
+vite_err.txt
+cloudflared.log
+*.log

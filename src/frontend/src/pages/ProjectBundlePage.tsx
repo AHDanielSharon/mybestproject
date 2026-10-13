@@ -249,7 +249,7 @@ To extract and use:
 Generated: ${new Date().toISOString()}
 `;
 
-      // Create downloadable text files (simulating the bundle)
+      // Download the README and a bundle manifest. (The full source is not bundled in the browser.)
       const readmeBlob = new Blob([readmeContent], { type: "text/markdown" });
       const infoBlob = new Blob([bundleInfo], { type: "text/plain" });
 
@@ -276,12 +276,6 @@ Generated: ${new Date().toISOString()}
       setProgress(100);
       toast.success("Project bundle files generated successfully!");
 
-      // Show completion message
-      setTimeout(() => {
-        toast.info(
-          "Note: Full ZIP bundling requires server-side implementation. README and bundle info downloaded.",
-        );
-      }, 1000);
     } catch (error) {
       console.error("Error generating bundle:", error);
       toast.error("Failed to generate project bundle. Please try again.");
@@ -317,7 +311,7 @@ Generated: ${new Date().toISOString()}
               Generate Complete Project Bundle
             </CardTitle>
             <CardDescription className="text-gray-400">
-              Create a downloadable ZIP archive containing all project files
+              Download a README and bundle manifest for this project
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -435,7 +429,7 @@ Generated: ${new Date().toISOString()}
               ) : (
                 <>
                   <Download className="mr-2 h-5 w-5" />
-                  Generate SOCIONET_Full_Source_Code_Version33.zip
+                  Download README and bundle info
                 </>
               )}
             </Button>
